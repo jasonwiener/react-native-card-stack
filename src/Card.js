@@ -12,35 +12,67 @@ export default class Card extends Component {
     this.state = {
       pan: new Animated.ValueXY()
     };
+
+    this.remoteSwipe.bind(this);
   }
 
-  componentWillMount() {
+  UNSAFE_componentWillMount() 
+  {
     this.panResponder = PanResponder.create({
       onMoveShouldSetResponderCapture: () => true,
       onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderGrant: (e, gestureState) => {
         this.state.pan.setValue({x: 0, y: 0});
       },
-      onPanResponderMove: Animated.event([
-        null, {dx: this.state.pan.x, dy: this.state.pan.y}
-      ]),
-      onPanResponderRelease: (e, {vx, vy}) => {
-        if (this.state.pan.x._value < this.props.leftSwipeThreshold) {
-          this.props.onSwipeLeft(this.props.index)
-        } else if (this.state.pan.x._value > this.props.rightSwipeThreshold) {
-          this.props.onSwipeRight(this.props.index)
-        } else if (this.state.pan.y._value < this.props.upSwipeThreshold) {
-          this.props.onSwipeUp(this.props.index)
-        } else if (this.state.pan.y._value > this.props.downSwipeThreshold) {
-          this.props.onSwipeDown(this.props.index)
-        } else {
-          Animated.spring(this.state.pan, {
-            toValue: 0,
-          }).start()
-        }
-      }
-    });
-  }
+      onPanResponderMove: Animated.event(
+      	[
+        	null, {dx: this.state.pan.x, dy: this.state.pan.y}
+      	], 
+      	{ useNativeDriver : false}
+      ),
+		onPanResponderRelease: (e, {vx, vy}) => {
+			if(this.state.pan.x._value < this.props.leftSwipeThreshold) 
+			{
+				this.props.onSwipeLeft(this.props.index, 'left');
+			}
+			else if(this.state.pan.x._value > this.props.rightSwipeThreshold)
+			{
+				this.props.onSwipeRight(this.props.index, 'right')
+			}
+			else if(this.state.pan.y._value < this.props.upSwipeThreshold)
+			{
+				this.props.onSwipeUp(this.props.index, 'up')
+			}
+			else if(this.state.pan.y._value > this.props.downSwipeThreshold) 
+			{
+				this.props.onSwipeDown(this.props.index, 'down')
+			}
+			else
+			{
+				Animated.spring(this.state.pan, {
+						toValue: 0,
+						useNativeDriver: false,
+					}).start()
+				}
+			}
+		});
+	}
+	remoteSwipe(direction, callback)
+	{
+		const _this = this;
+		Animated.timing(
+			this.state.pan, 
+			{
+				duration: 150,
+				toValue: 275 * ((direction == 'left') ? -1 : 1),
+				useNativeDriver: false,
+			}
+		).start(({ finished }) => {
+			_this.props[(direction == 'left') ? 'onSwipeLeft' : 'onSwipeRight' ](_this.props.index, direction);
+			if(callback)
+				callback();
+		})
+	}
 
   componentWillUnmount() {
     this.state.pan.x.removeAllListeners();
@@ -62,7 +94,7 @@ export default class Card extends Component {
   render() {
     return (
       <Animated.View style={this.getAnimatedViewStyle()} {...this.panResponder.panHandlers}>
-        {this.props.renderCard(this.props.item)}
+        {this.props.renderCard(this)}
       </Animated.View>
     );
   }
